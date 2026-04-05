@@ -10,6 +10,12 @@ const errorHandler = require("./middleware/errorHandler");
 const apiLimiter = require("./middleware/rateLimiter");
 const applyGraphQL = require("./graphql");
 
+const shouldUseServerlessSwaggerUi = () => {
+  // Vercel serverless builds can miss swagger-ui-express static assets (.css/.js).
+  // Prefer CDN-backed UI there, and keep local dev on swagger-ui-express.
+  return Boolean(process.env.VERCEL) || Boolean(process.env.VERCEL_ENV);
+};
+
 const swaggerDocsHtml = `<!doctype html>
 <html lang="en">
   <head>
@@ -73,7 +79,7 @@ const createApp = async () => {
     res.status(200).json(swaggerSpec);
   });
 
-  if (env.nodeEnv !== "production") {
+  if (!shouldUseServerlessSwaggerUi()) {
     const swaggerUi = require("swagger-ui-express");
     app.use(
       "/api-docs",

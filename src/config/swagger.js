@@ -1,6 +1,23 @@
 const swaggerJsdoc = require("swagger-jsdoc");
 const env = require("./env");
 
+const normalizeServerUrl = (value) => {
+  if (!value || typeof value !== "string") {
+    return "";
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+
+  return `https://${trimmed}`;
+};
+
 const servers = [
   {
     url: `http://localhost:${env.port}`,
@@ -8,9 +25,11 @@ const servers = [
   },
 ];
 
-if (env.appBaseUrl) {
+const deploymentServerUrl = normalizeServerUrl(env.appBaseUrl);
+
+if (deploymentServerUrl) {
   servers.unshift({
-    url: env.appBaseUrl,
+    url: deploymentServerUrl,
     description: "Configured deployment server",
   });
 }
