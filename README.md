@@ -206,7 +206,12 @@ Admin user update payload rules:
 Production usage:
 
 - Use OpenAPI JSON directly: https://zorvyn-backend-coral.vercel.app/swagger.json
-- Swagger UI is intentionally disabled in production
+- Swagger UI: https://zorvyn-backend-coral.vercel.app/api-docs/
+
+Local usage:
+
+- Swagger UI: http://localhost:2000/api-docs/
+- Swagger JSON: http://localhost:2000/swagger.json
 
 Swagger Editor steps:
 
