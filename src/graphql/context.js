@@ -1,5 +1,5 @@
 const User = require("../models/User");
-const { verifyToken } = require("../utils/jwt");
+const { verifyAccessToken } = require("../utils/jwt");
 
 const buildGraphQLContext = async ({ req }) => {
   const authHeader = req.headers.authorization;
@@ -11,7 +11,7 @@ const buildGraphQLContext = async ({ req }) => {
   const token = authHeader.split(" ")[1];
 
   try {
-    const decoded = verifyToken(token);
+    const decoded = verifyAccessToken(token);
     const user = await User.findById(decoded.userId).select("-password");
 
     if (!user || !user.isActive) {

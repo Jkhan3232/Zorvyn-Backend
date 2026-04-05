@@ -1,7 +1,7 @@
 const User = require("../models/User");
 const ApiError = require("../utils/ApiError");
 const asyncHandler = require("../utils/asyncHandler");
-const { verifyToken } = require("../utils/jwt");
+const { verifyAccessToken } = require("../utils/jwt");
 
 const authenticate = asyncHandler(async (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -22,7 +22,7 @@ const authenticate = asyncHandler(async (req, res, next) => {
 
   let decoded;
   try {
-    decoded = verifyToken(token);
+    decoded = verifyAccessToken(token);
   } catch (error) {
     throw new ApiError(401, "Invalid or expired token");
   }

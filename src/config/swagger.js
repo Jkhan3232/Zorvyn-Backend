@@ -1,6 +1,20 @@
 const swaggerJsdoc = require("swagger-jsdoc");
 const env = require("./env");
 
+const servers = [
+  {
+    url: `http://localhost:${env.port}`,
+    description: "Local development server",
+  },
+];
+
+if (env.appBaseUrl) {
+  servers.unshift({
+    url: env.appBaseUrl,
+    description: "Configured deployment server",
+  });
+}
+
 const options = {
   definition: {
     openapi: "3.0.3",
@@ -21,12 +35,7 @@ const options = {
         "3) Execute protected endpoints and inspect live response payloads.",
       ].join("\n"),
     },
-    servers: [
-      {
-        url: `http://localhost:${env.port}`,
-        description: "Local development server",
-      },
-    ],
+    servers,
     tags: [
       {
         name: "Health",
@@ -236,12 +245,71 @@ const options = {
             message: { type: "string", example: "Login successful" },
             data: {
               type: "object",
-              required: ["token", "user"],
+              required: ["accessToken", "refreshToken", "user"],
               properties: {
-                token: { type: "string", example: "<JWT_TOKEN>" },
+                token: {
+                  type: "string",
+                  example: "<JWT_ACCESS_TOKEN>",
+                  description:
+                    "Backward-compatible alias for accessToken used by existing clients",
+                },
+                accessToken: {
+                  type: "string",
+                  example: "<JWT_ACCESS_TOKEN>",
+                },
+                refreshToken: {
+                  type: "string",
+                  example: "<JWT_REFRESH_TOKEN>",
+                },
                 user: { $ref: "#/components/schemas/UserProfile" },
               },
             },
+          },
+        },
+        RefreshTokenRequest: {
+          type: "object",
+          properties: {
+            refreshToken: {
+              type: "string",
+              example: "<JWT_REFRESH_TOKEN>",
+              description:
+                "Optional when x-refresh-token header is provided. One of body or header is required.",
+            },
+          },
+        },
+        RefreshTokenResponse: {
+          type: "object",
+          required: ["success", "message", "data"],
+          properties: {
+            success: { type: "boolean", example: true },
+            message: {
+              type: "string",
+              example: "Access token refreshed successfully",
+            },
+            data: {
+              type: "object",
+              required: ["accessToken"],
+              properties: {
+                token: {
+                  type: "string",
+                  example: "<JWT_ACCESS_TOKEN>",
+                  description:
+                    "Backward-compatible alias for accessToken used by existing clients",
+                },
+                accessToken: {
+                  type: "string",
+                  example: "<JWT_ACCESS_TOKEN>",
+                },
+              },
+            },
+          },
+        },
+        LogoutResponse: {
+          type: "object",
+          required: ["success", "message"],
+          properties: {
+            success: { type: "boolean", example: true },
+            message: { type: "string", example: "Logout successful" },
           },
         },
         CreateManagedUserRequest: {
@@ -284,6 +352,46 @@ const options = {
           required: ["isActive"],
           properties: {
             isActive: { type: "boolean", example: false },
+          },
+        },
+        AdminProfileUpdateRequest: {
+          type: "object",
+          properties: {
+            name: { type: "string", example: "Admin Updated" },
+            email: {
+              type: "string",
+              format: "email",
+              example: "admin.updated@example.com",
+            },
+            password: {
+              type: "string",
+              minLength: 6,
+              maxLength: 50,
+              example: "NewSecurePass@123",
+            },
+          },
+        },
+        AdminUserUpdateRequest: {
+          type: "object",
+          properties: {
+            name: { type: "string", example: "Managed User Updated" },
+            email: {
+              type: "string",
+              format: "email",
+              example: "managed.user@example.com",
+            },
+            role: {
+              type: "string",
+              enum: ["admin", "staff", "user"],
+              description:
+                "Mapped internally as admin->admin, staff->analyst, user->viewer",
+              example: "staff",
+            },
+            status: {
+              type: "string",
+              enum: ["active", "inactive"],
+              example: "active",
+            },
           },
         },
         UserActionResponse: {
@@ -768,6 +876,88 @@ const options = {
           },
         },
       },
+      "/api/auth/refresh-token": {
+        post: {
+          tags: ["Auth (Public)", "Admin", "Viewer", "Analytics User"],
+          summary: "Refresh access token",
+          description:
+            "Provide refresh token via x-refresh-token header or request body to receive a new access token.",
+          security: [],
+          parameters: [
+            {
+              name: "x-refresh-token",
+              in: "header",
+              required: false,
+              schema: { type: "string" },
+              description:
+                "Refresh token header. Required when refreshToken is not sent in body.",
+            },
+          ],
+          requestBody: {
+            required: false,
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/RefreshTokenRequest" },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: "Access token refreshed successfully",
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/RefreshTokenResponse",
+                  },
+                },
+              },
+            },
+            400: { $ref: "#/components/responses/ValidationFailed" },
+            401: { $ref: "#/components/responses/UnauthorizedError" },
+            403: { $ref: "#/components/responses/ForbiddenError" },
+            500: { $ref: "#/components/responses/InternalServerError" },
+          },
+        },
+      },
+      "/api/auth/logout": {
+        post: {
+          tags: ["Auth (Public)", "Admin", "Viewer", "Analytics User"],
+          summary: "Logout and revoke refresh token",
+          description:
+            "Provide refresh token via x-refresh-token header or request body to revoke current session.",
+          security: [],
+          parameters: [
+            {
+              name: "x-refresh-token",
+              in: "header",
+              required: false,
+              schema: { type: "string" },
+              description:
+                "Refresh token header. Required when refreshToken is not sent in body.",
+            },
+          ],
+          requestBody: {
+            required: false,
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/RefreshTokenRequest" },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: "Logout successful",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/LogoutResponse" },
+                },
+              },
+            },
+            400: { $ref: "#/components/responses/ValidationFailed" },
+            500: { $ref: "#/components/responses/InternalServerError" },
+          },
+        },
+      },
       "/api/users": {
         get: {
           tags: ["Users", "Admin"],
@@ -814,6 +1004,73 @@ const options = {
             400: { $ref: "#/components/responses/ValidationFailed" },
             401: { $ref: "#/components/responses/UnauthorizedError" },
             403: { $ref: "#/components/responses/ForbiddenError" },
+            500: { $ref: "#/components/responses/InternalServerError" },
+          },
+        },
+      },
+      "/api/admin/profile": {
+        put: {
+          tags: ["Users", "Admin"],
+          summary: "Update own admin profile",
+          description:
+            "Admin-only endpoint to update own name, email, and optional password.",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/AdminProfileUpdateRequest",
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: "Admin profile updated successfully",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/UserActionResponse" },
+                },
+              },
+            },
+            400: { $ref: "#/components/responses/ValidationFailed" },
+            401: { $ref: "#/components/responses/UnauthorizedError" },
+            403: { $ref: "#/components/responses/ForbiddenError" },
+            404: { $ref: "#/components/responses/NotFoundError" },
+            500: { $ref: "#/components/responses/InternalServerError" },
+          },
+        },
+      },
+      "/api/admin/user/{id}": {
+        put: {
+          tags: ["Users", "Admin"],
+          summary: "Update any user by admin",
+          description:
+            "Admin-only endpoint to update name, email, role (admin/staff/user), and status.",
+          parameters: [{ $ref: "#/components/parameters/UserIdParam" }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/AdminUserUpdateRequest",
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: "User updated successfully",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/UserActionResponse" },
+                },
+              },
+            },
+            400: { $ref: "#/components/responses/ValidationFailed" },
+            401: { $ref: "#/components/responses/UnauthorizedError" },
+            403: { $ref: "#/components/responses/ForbiddenError" },
+            404: { $ref: "#/components/responses/NotFoundError" },
             500: { $ref: "#/components/responses/InternalServerError" },
           },
         },

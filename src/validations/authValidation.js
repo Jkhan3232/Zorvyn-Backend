@@ -1,4 +1,4 @@
-const { body } = require("express-validator");
+const { body, header } = require("express-validator");
 const { MANAGED_USER_ROLES } = require("../config/roles");
 
 const registerValidation = [
@@ -42,7 +42,40 @@ const loginValidation = [
   body("password").notEmpty().withMessage("Password is required"),
 ];
 
+const refreshTokenPayloadValidation = [
+  body("refreshToken")
+    .optional()
+    .isString()
+    .withMessage("refreshToken must be a string")
+    .trim()
+    .notEmpty()
+    .withMessage("refreshToken cannot be empty"),
+  header("x-refresh-token")
+    .optional()
+    .isString()
+    .withMessage("x-refresh-token header must be a string")
+    .trim()
+    .notEmpty()
+    .withMessage("x-refresh-token header cannot be empty"),
+  body().custom((_, { req }) => {
+    const tokenFromBody =
+      req.body &&
+      typeof req.body.refreshToken === "string" &&
+      req.body.refreshToken.trim();
+    const tokenFromHeader = req.get("x-refresh-token");
+
+    if (!tokenFromBody && !tokenFromHeader) {
+      throw new Error(
+        "Provide refresh token using x-refresh-token header or refreshToken in request body",
+      );
+    }
+
+    return true;
+  }),
+];
+
 module.exports = {
   registerValidation,
   loginValidation,
+  refreshTokenPayloadValidation,
 };

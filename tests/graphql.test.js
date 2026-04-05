@@ -67,9 +67,9 @@ describe("GraphQL API Test", () => {
 
   it("should create a record via GraphQL mutation", async () => {
     const mutation = `
-      mutation CreateRecord($input: RecordInput!) {
+      mutation CreateRecord($input: CreateRecordInput!) {
         createRecord(input: $input) {
-          _id
+          id
           amount
           type
           category

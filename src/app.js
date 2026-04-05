@@ -2,7 +2,6 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
-const swaggerUi = require("swagger-ui-express");
 const env = require("./config/env");
 const routes = require("./routes");
 const swaggerSpec = require("./config/swagger");
@@ -29,7 +28,15 @@ const createApp = async () => {
     });
   });
 
-  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+  app.get("/swagger.json", (req, res) => {
+    res.status(200).json(swaggerSpec);
+  });
+
+  if (env.nodeEnv !== "production") {
+    const swaggerUi = require("swagger-ui-express");
+    app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+  }
+
   app.use("/api", routes);
 
   if (env.enableGraphQL) {

@@ -56,6 +56,44 @@ describe("Finance API: auth and record access", () => {
     expect(loginRes.status).toBe(200);
     expect(loginRes.body.success).toBe(true);
     expect(loginRes.body.data.token).toBeDefined();
+    expect(loginRes.body.data.accessToken).toBeDefined();
+    expect(loginRes.body.data.refreshToken).toBeDefined();
+  });
+
+  it("refreshes access token and revokes refresh token on logout", async () => {
+    await request(app).post("/api/auth/register").send({
+      name: "Refresh User",
+      email: "refresh@example.com",
+      password: "password123",
+    });
+
+    const loginRes = await request(app).post("/api/auth/login").send({
+      email: "refresh@example.com",
+      password: "password123",
+    });
+
+    const refreshToken = loginRes.body.data.refreshToken;
+
+    const refreshRes = await request(app)
+      .post("/api/auth/refresh-token")
+      .send({ refreshToken });
+
+    expect(refreshRes.status).toBe(200);
+    expect(refreshRes.body.success).toBe(true);
+    expect(refreshRes.body.data.accessToken).toBeDefined();
+
+    const logoutRes = await request(app)
+      .post("/api/auth/logout")
+      .set("x-refresh-token", refreshToken);
+
+    expect(logoutRes.status).toBe(200);
+    expect(logoutRes.body.success).toBe(true);
+
+    const refreshAfterLogout = await request(app)
+      .post("/api/auth/refresh-token")
+      .set("x-refresh-token", refreshToken);
+
+    expect(refreshAfterLogout.status).toBe(401);
   });
 
   it("enforces admin write, analyst read, and viewer dashboard-only access", async () => {
@@ -240,5 +278,110 @@ describe("Finance API: auth and record access", () => {
 
     expect(analystLogin.status).toBe(200);
     expect(analystLogin.body.success).toBe(true);
+  });
+
+  it("allows admin to update own profile", async () => {
+    await request(app).post("/api/auth/register").send({
+      name: "Profile Admin",
+      email: "profile.admin@example.com",
+      password: "password123",
+    });
+
+    await User.findOneAndUpdate(
+      { email: "profile.admin@example.com" },
+      { role: "admin" },
+      { returnDocument: "after" },
+    );
+
+    const adminLogin = await request(app).post("/api/auth/login").send({
+      email: "profile.admin@example.com",
+      password: "password123",
+    });
+
+    const adminToken = adminLogin.body.data.accessToken;
+
+    const updateProfileRes = await request(app)
+      .put("/api/admin/profile")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({
+        name: "Profile Admin Updated",
+        email: "profile.admin.updated@example.com",
+        password: "newpassword123",
+      });
+
+    expect(updateProfileRes.status).toBe(200);
+    expect(updateProfileRes.body.success).toBe(true);
+    expect(updateProfileRes.body.data.email).toBe(
+      "profile.admin.updated@example.com",
+    );
+
+    const oldCredentialsLogin = await request(app)
+      .post("/api/auth/login")
+      .send({
+        email: "profile.admin@example.com",
+        password: "password123",
+      });
+
+    expect(oldCredentialsLogin.status).toBe(401);
+
+    const updatedCredentialsLogin = await request(app)
+      .post("/api/auth/login")
+      .send({
+        email: "profile.admin.updated@example.com",
+        password: "newpassword123",
+      });
+
+    expect(updatedCredentialsLogin.status).toBe(200);
+    expect(updatedCredentialsLogin.body.success).toBe(true);
+  });
+
+  it("allows admin to update any user role and status", async () => {
+    await request(app).post("/api/auth/register").send({
+      name: "Admin Updater",
+      email: "admin.updater@example.com",
+      password: "password123",
+    });
+
+    await User.findOneAndUpdate(
+      { email: "admin.updater@example.com" },
+      { role: "admin" },
+      { returnDocument: "after" },
+    );
+
+    await request(app).post("/api/auth/register").send({
+      name: "Target User",
+      email: "target.user@example.com",
+      password: "password123",
+    });
+
+    const adminLogin = await request(app).post("/api/auth/login").send({
+      email: "admin.updater@example.com",
+      password: "password123",
+    });
+
+    const adminToken = adminLogin.body.data.accessToken;
+    const targetUser = await User.findOne({ email: "target.user@example.com" });
+
+    const updateUserRes = await request(app)
+      .put(`/api/admin/user/${targetUser._id.toString()}`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({
+        name: "Target User Updated",
+        role: "staff",
+        status: "inactive",
+      });
+
+    expect(updateUserRes.status).toBe(200);
+    expect(updateUserRes.body.success).toBe(true);
+    expect(updateUserRes.body.data.name).toBe("Target User Updated");
+    expect(updateUserRes.body.data.role).toBe("analyst");
+    expect(updateUserRes.body.data.isActive).toBe(false);
+
+    const targetLoginRes = await request(app).post("/api/auth/login").send({
+      email: "target.user@example.com",
+      password: "password123",
+    });
+
+    expect(targetLoginRes.status).toBe(403);
   });
 });
