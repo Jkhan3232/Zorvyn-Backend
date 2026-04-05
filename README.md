@@ -7,7 +7,9 @@ Production-ready Express + MongoDB backend for role-based finance management, fi
 - Frontend: https://zorvyn-frontend-jeeshan.vercel.app
 - Backend REST base: https://zorvyn-backend-coral.vercel.app/api
 - GraphQL endpoint: https://zorvyn-backend-coral.vercel.app/graphql
+- Swagger UI: https://zorvyn-backend-coral.vercel.app/api-docs/
 - OpenAPI JSON: https://zorvyn-backend-coral.vercel.app/swagger.json
+- Health check: https://zorvyn-backend-coral.vercel.app/health
 
 ---
 

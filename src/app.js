@@ -67,7 +67,7 @@ const createApp = async () => {
   app.use(express.urlencoded({ extended: true }));
   app.use(apiLimiter);
 
-  app.get("/", (req, res) => {
+  app.get("/health", (req, res) => {
     res.status(200).json({
       success: true,
       message: "Service is healthy",
