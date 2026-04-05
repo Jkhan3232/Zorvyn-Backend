@@ -2,6 +2,8 @@
 
 Welcome to the **Zorvyn Backend API**! This project is a robust, production-ready Node.js backend tailored for managing financial data, user roles, and real-time dashboard analytics.
 
+🔗 **Live Frontend Application:** [zorvyn-frontend-jeeshan.vercel.app](https://zorvyn-frontend-jeeshan.vercel.app)
+
 ---
 
 ## 🚀 Overview & System Flow
