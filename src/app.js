@@ -67,7 +67,7 @@ const createApp = async () => {
   app.use(express.urlencoded({ extended: true }));
   app.use(apiLimiter);
 
-  app.get("/health", (req, res) => {
+  app.get("/", (req, res) => {
     res.status(200).json({
       success: true,
       message: "Service is healthy",
@@ -89,11 +89,7 @@ const createApp = async () => {
       }),
     );
   } else {
-    app.get("/api-docs", (req, res) => {
-      res.redirect(301, "/api-docs/");
-    });
-
-    app.get("/api-docs/", (req, res) => {
+    app.get(["/api-docs", "/api-docs/"], (req, res) => {
       // Allow Swagger assets and inline boot script for docs rendering.
       res.set(
         "Content-Security-Policy",
