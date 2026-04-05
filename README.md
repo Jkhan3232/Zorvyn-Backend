@@ -2,6 +2,11 @@
 
 Production-ready Express + MongoDB backend for role-based finance management, financial records, dashboard analytics, and dual API support (REST + GraphQL).
 
+## Temporary login Cred
+
+- Email = jeeshankhan3232@yopmai.com
+- Password = Admin@123
+
 ## Live Links
 
 - Frontend: https://zorvyn-frontend-jeeshan.vercel.app
