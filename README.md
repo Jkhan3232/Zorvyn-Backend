@@ -1,213 +1,132 @@
-# Finance Data Processing and Access Control Dashboard Backend
+# 📊 Zorvyn - Finance Management Backend
 
-Production-structured backend system using Node.js, Express.js, MongoDB (Mongoose), JWT authentication, RBAC, aggregation-driven dashboard APIs, optional GraphQL, Swagger docs, and Jest tests.
+Welcome to the **Zorvyn Backend API**! This project is a robust, production-ready Node.js backend tailored for managing financial data, user roles, and real-time dashboard analytics.
 
-## Tech Stack
+---
 
-- Node.js
-- Express.js
-- MongoDB + Mongoose
-- JWT Authentication
-- Apollo Server (GraphQL)
-- Jest + Supertest + mongodb-memory-server
+## 🚀 Overview & System Flow
 
-## Project Structure
+This system is an **Access-Controlled Finance Dashboard**. It allows an organization to securely record incomes and expenses, and view aggregated analytics based on strict user roles.
+
+### How The System Flows:
+
+1. **User Onboarding (Auth)**:
+   - **Self-Registration**: Public users can register themselves. They are automatically assigned the `viewer` role for security.
+   - **Admin Creation**: Admins can securely create `analyst` or `viewer` accounts. The backend generates a temporary password and sends a beautiful welcome email (HTML, compiled via MJML) through SMTP.
+2. **Access Control (RBAC)**:
+   - Every request passes through `authMiddleware` (to verify the JWT token) and `authorize` middleware (to check if the user's role has permission for that specific route).
+3. **Financial Records Management**:
+   - Admins can create, update, or delete financial records.
+   - **Safety First**: The system implements **Soft Deletes**. Calling DELETE on a record merely flags it as `isDeleted: true`, preserving financial history.
+4. **Dashboard Analytics (REST & GraphQL)**:
+   - Powered by **MongoDB Aggregation Pipelines**. Raw records are dynamically grouped into useful metrics: _Total Income, Total Expense, Net Balance, Monthly Trends,_ and _Category Totals_.
+   - These analytics are served via standard **REST APIs** or dynamically queried via **GraphQL**.
+
+---
+
+## 👥 Role & Permissions Matrix
+
+| Feature                                   | Admin 👑 | Analyst 🔎 | Viewer 👁️ |
+| ----------------------------------------- | :------: | :--------: | :-------: |
+| **Authentication**                        |    ✅    |     ✅     |    ✅     |
+| **Manage Users** _(Roles/Status)_         |    ✅    |     ❌     |    ❌     |
+| **Manage Records** _(Create/Edit/Delete)_ |    ✅    |     ❌     |    ❌     |
+| **View Records List** _(Search/Filter)_   |    ✅    |     ✅     |    ❌     |
+| **View Dashboard Summaries**              |    ✅    |     ✅     |    ✅     |
+
+---
+
+## 🛠 Tech Stack & Security
+
+- **Core**: Node.js, Express.js
+- **Database**: MongoDB (Mongoose ODM)
+- **Security**:
+  - JWT (JSON Web Tokens)
+  - `bcryptjs` (Password Hashing)
+  - `helmet` (HTTP Headers protection)
+  - `express-rate-limit` (DDoS prevention)
+- **API Interfaces**: RESTful APIs & GraphQL (Apollo Server v4)
+- **Documentation**: Swagger UI (OpenAPI 3.0.3)
+- **Testing Environment**: Jest, Supertest, `mongodb-memory-server`
+- **Mail Integration**: Nodemailer with MJML (Responsive Email Templates)
+
+---
+
+## 📁 Codebase Architecture (Layered Design)
+
+The codebase strictly follows the **Controller-Service-Model** pattern, ensuring cleanly decoupled code.
 
 ```text
 src/
-  config/
-  controllers/
-  graphql/
-  middleware/
-  models/
-  routes/
-  services/
-  utils/
-  validations/
-tests/
+ ├── app.js / server.js   # Express entry points, routing, middleware injections
+ ├── config/              # DB connection, Environment variables, Roles & Swagger setup
+ ├── controllers/         # Handles HTTP Requests/Responses (Extracts payload, sends JSON)
+ ├── services/            # Core Business Logic (DB Queries, Aggregations, Emails)
+ ├── graphql/             # Apollo Setup, typeDefs, resolvers (reuses the services layer!)
+ ├── middleware/          # Security walls (authMiddleware, authorize, rateLimiter)
+ ├── models/              # Mongoose Schemas (User, Record)
+ ├── routes/              # Express API Routes definitions
+ ├── templates/           # MJML Email templates
+ ├── utils/               # JWT helper, custom ApiError, asyncHandler
+ └── validations/         # express-validator schemas for strict payload checking
+tests/                    # Automated testing suites (.test.js files)
 ```
 
-## Setup
+---
 
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
-2. Configure environment:
-   ```bash
-   cp .env.example .env
-   ```
-3. Start in development:
-   ```bash
-   npm run dev
-   ```
-4. Run tests:
-   ```bash
-   npm test
-   ```
+## ⚡ Setup & Installation
 
-## API Base URLs
+**1. Install Dependencies**
 
-- REST API base: `http://localhost:2000/api`
-- Health: `http://localhost:2000/health`
-- Swagger docs: `http://localhost:2000/api-docs`
-- GraphQL (optional): `http://localhost:2000/graphql`
-
-## Authentication
-
-JWT token must be sent in header:
-
-```text
-Authorization: Bearer <token>
+```bash
+npm install
 ```
 
-## Role Permissions
+**2. Configure Environment**
+Copy `.env.example` to `.env` and fill in your MongoDB URI, JWT Secret, and SMTP credentials.
 
-- `viewer`: dashboard summary read only
-- `analyst`: read records + dashboard summary
-- `admin`: full access (records CRUD + user role/status management)
+```bash
+cp .env.example .env
+```
 
-## REST Endpoints
+**3. Run the Development Server**
 
-### Auth
+```bash
+npm run dev
+```
 
-- `POST /auth/register` - Register user (default role: viewer)
-- `POST /auth/login` - Login and get JWT
+**4. Run Automated Tests**
 
-`POST /auth/register` special behavior:
+```bash
+npm test
+```
 
-- Public call (no admin token): normal self-register, no credentials email.
-- Admin token call: treated as managed user creation (`viewer|analyst`) and credentials email is sent.
+---
 
-### User Management (admin only)
+## 🔌 API Testing & Interfaces
 
-- `POST /users` - Create `viewer`/`analyst` user and send temporary password over email
-- `GET /users` - List all users
-- `PATCH /users/:id/role` - Update role (`viewer | analyst | admin`)
-- `PATCH /users/:id/status` - Activate/deactivate user (`isActive: boolean`)
+We provide three robust ways to interact with the backend:
 
-`POST /users` accepts:
+### 1. Swagger UI (REST Documentation)
 
-- `name` (required)
-- `email` (required)
-- `role` (optional, `viewer|analyst`, default `viewer`)
-- `isActive` (optional, boolean, default `true`)
+Visit **`http://localhost:2000/api-docs`**.
+Here you'll find beautifully mapped documentation for every REST endpoint, separated by role tags (`admin`, `viewer`, `analyst`). You can generate tokens and test APIs directly from the browser using the "Try it out" button.
 
-### Financial Records
+### 2. GraphQL Playground
 
-- `POST /records` - Create record (admin only)
-- `PATCH /records/:id` - Update record (admin only)
-- `DELETE /records/:id` - Soft delete record (admin only)
-- `GET /records` - Read records (analyst, admin)
+Visit **`http://localhost:2000/graphql`**.
+We use the Local Default Playground. You can inject your JWT in the `HTTP HEADERS` tab (`{"Authorization": "Bearer <token>"}`) and write queries or mutations to fetch financial summaries exactly the way your frontend needs them.
 
-`GET /records` supports:
+### 3. Postman / cURL
 
-- `startDate` (ISO date)
-- `endDate` (ISO date)
-- `category`
-- `type` (`income|expense`)
-- `search` (category/note)
-- `page` (default 1)
-- `limit` (default 10)
-- `sortBy` (`date|amount|category|createdAt`)
-- `sortOrder` (`asc|desc`)
+Standard REST base URL: `http://localhost:2000/api/`
+All secured endpoints require the header:
+`Authorization: Bearer <your_jwt_token>`
 
-### Dashboard Summary
+---
 
-- `GET /dashboard/total-income`
-- `GET /dashboard/total-expense`
-- `GET /dashboard/net-balance`
-- `GET /dashboard/category-totals`
-- `GET /dashboard/monthly-trends`
-- `GET /dashboard/recent-transactions`
-- `GET /dashboard/summary`
+## 💡 Key Design Decisions
 
-All dashboard endpoints are accessible by `viewer`, `analyst`, and `admin`.
-
-## GraphQL
-
-GraphQL is enabled when `ENABLE_GRAPHQL=true`.
-
-### Types included
-
-- `User`
-- `Record`
-- `Summary`
-
-### Queries
-
-- `getRecords(filter)`
-- `getSummary`
-
-### Mutations
-
-- `createRecord(input)`
-- `updateRecord(id, input)`
-- `deleteRecord(id)`
-
-Role checks are enforced inside resolvers:
-
-- `getRecords`: analyst, admin
-- `getSummary`: viewer, analyst, admin
-- Mutations: admin only
-
-## Validation and Error Handling
-
-- Request validation via `express-validator`
-- Centralized error middleware
-- Standard status code usage:
-  - `400` Bad Request
-  - `401` Unauthorized
-  - `403` Forbidden
-  - `404` Not Found
-  - `500` Server Error
-
-## Data Persistence
-
-- Mongoose schemas with validation
-- Timestamps on all core models
-- Record soft-delete using `isDeleted`
-
-## Optional Enhancements Included
-
-- Pagination (`GET /records`)
-- Search (`GET /records?search=...`)
-- Soft delete (`isDeleted` on records)
-- Rate limiting (`express-rate-limit`)
-- API docs (`/api-docs`)
-- Unit/integration tests (`npm test`)
-- GraphQL support
-
-curl --location 'http://localhost:2000/graphql' \
---header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OWNlN2RlZDBmZDFlN2JlNGE0Y2Q2MTgiLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NzUzODI1MzEsImV4cCI6MTc3NTQ2ODkzMX0.hMTVbTsi5io7Tx82CyElK7GU7pp_zHTPVm1DEICnfwE' \
---header 'Content-Type: application/json' \
---data '{"query":"query GetFullSummary { getSummary { totalIncome totalExpense netBalance monthlyTrends { month totalIncome totalExpense netBalance } } }","variables":{}}'
-
-## SMTP Setup (for admin-created users)
-
-When admin creates `viewer`/`analyst` users via `POST /api/users`, the backend generates a temporary password and sends it by email.
-
-Set these env variables:
-
-- `SMTP_HOST`
-- `SMTP_PORT`
-- `SMTP_SECURE`
-- `SMTP_USER`
-- `SMTP_PASS`
-- `SMTP_FROM_EMAIL`
-- `SMTP_FROM_NAME`
-- `APP_LOGIN_URL`
-
-If SMTP is not configured, managed user creation returns an error.
-
-MJML template file for credentials email:
-
-- `src/templates/emailTemplates.mjml.js`
-
-## Assumptions
-
-1. New users are registered as `viewer` by default for security.
-2. At least one admin must exist to manage roles and activation status.
-3. Financial records are never hard-deleted from database (soft delete applied).
-4. This template targets production code organization, while deployment setup is intentionally simplified.
-5. Admin-managed users receive temporary credentials via SMTP email.
+1. **Service Reusability**: The logic to fetch dashboard summaries is written once in `dashboardService.js`. Both the REST Controller (`dashboardController`) and the GraphQL Resolver (`graphql/resolvers.js`) call this same service. No duplicate code!
+2. **Centralized Error Handling**: Errors thrown anywhere in the `services` are automatically caught by the `asyncHandler` wrapper and formatted cleanly by the `errorHandler` middleware.
+3. **Pagination & Filtering**: The `GET /records` API is highly optimized. It accepts multiple query params (`category`, `type`, `startDate`, `search`) and returns paginated data (`page`, `limit`), crucial for frontend performance.
