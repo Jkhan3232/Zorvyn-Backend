@@ -4,7 +4,7 @@ Production-ready Express + MongoDB backend for role-based finance management, fi
 
 ## Temporary login Cred
 
-- Email = jeeshankhan3232@yopmai.com
+- Email = jeeshankhan3232@yopmail.com
 - Password = Admin@123
 
 ## Live Links
